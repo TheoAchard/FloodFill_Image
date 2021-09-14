@@ -24,14 +24,6 @@ class FloodFillImage extends StatefulWidget {
   /// <br>Default value is 8.
   final int tolerance;
 
-  /// Width of the image.
-  /// Parent widget width will be prioritize if it's provided and less than the image width.
-  final int? width;
-
-  /// Height of the image.
-  /// Parent widget height will be prioritize if it's provided and less than the image height.
-  final int? height;
-
   /// Alignment of the image.
   final AlignmentGeometry? alignment;
 
@@ -41,7 +33,7 @@ class FloodFillImage extends StatefulWidget {
 
   /// Callback function that returns the touch position and an [Image] from *dart:ui* when flood fill starts.
   /// <br>**Note:** Touch coordinate is relative to the image dimension.
-  final Function(Offset position,ui.Image image)? onFloodFillStart;
+  final Function(Offset position, ui.Image image)? onFloodFillStart;
 
   /// Callback function that returns an [Image] from *dart:ui* when flood fill ended.
   final Function(ui.Image image)? onFloodFillEnd;
@@ -54,8 +46,6 @@ class FloodFillImage extends StatefulWidget {
       this.isFillActive = true,
       this.avoidColor,
       this.tolerance = 8,
-      this.width,
-      this.height,
       this.alignment,
       this.loadingWidget,
       this.onFloodFillStart,
@@ -78,7 +68,6 @@ class _FloodFillImageState extends State<FloodFillImage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _resizeImage();
     _getImage();
   }
 
@@ -86,22 +75,15 @@ class _FloodFillImageState extends State<FloodFillImage> {
   void didUpdateWidget(FloodFillImage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.imageProvider != oldWidget.imageProvider) {
-      _resizeImage();
       _getImage();
     }
   }
 
-  void _resizeImage() {
-    _imageProvider = widget.imageProvider;
-    if (widget.width != null)
-      _imageProvider = ResizeImage(widget.imageProvider, width: widget.width);
-    if (widget.height != null)
-      _imageProvider = ResizeImage(widget.imageProvider, height: widget.height);
-  }
-
   void _getImage() {
+    _imageProvider = widget.imageProvider;
     final ImageStream? oldImageStream = _imageStream;
-    _imageStream = _imageProvider?.resolve(createLocalImageConfiguration(context));
+    _imageStream =
+        _imageProvider?.resolve(createLocalImageConfiguration(context));
     if (_imageStream?.key != oldImageStream?.key) {
       final ImageStreamListener listener = ImageStreamListener(_updateImage);
       oldImageStream?.removeListener(listener);
@@ -111,8 +93,8 @@ class _FloodFillImageState extends State<FloodFillImage> {
 
   void _updateImage(ImageInfo imageInfo, bool synchronousCall) {
     _imageInfo = imageInfo;
-    _width = _imageInfo?.image.width.toDouble();
-    _height = _imageInfo?.image.height.toDouble();
+    _width = _width ?? _imageInfo?.image.width.toDouble();
+    _height = _height ?? _imageInfo?.image.height.toDouble();
     _repainter = ValueNotifier("");
     _painter = FloodFillPainter(
         image: _imageInfo!.image,
@@ -136,7 +118,8 @@ class _FloodFillImageState extends State<FloodFillImage> {
   @override
   Widget build(BuildContext context) {
     if (_painter != null) {
-      _painter?.setFillColor(widget.fillColor); //incase we want to update fillColor
+      _painter
+          ?.setFillColor(widget.fillColor); //incase we want to update fillColor
       _painter?.setAvoidColor(widget.avoidColor!);
       _painter?.setTolerance(widget.tolerance);
       _painter?.setIsFillActive(widget.isFillActive);
@@ -146,28 +129,26 @@ class _FloodFillImageState extends State<FloodFillImage> {
             double w = _width!;
             double h = _height!;
             if (!constraints.maxWidth.isInfinite) {
-              if (constraints.maxWidth < _width!) {
-                w = constraints.maxWidth;
+              if (constraints.maxWidth * 3 < _width!) {
+                w = constraints.maxWidth * 3;
               }
             }
 
             if (!constraints.maxHeight.isInfinite) {
-              if (constraints.maxHeight < _height!) {
-                h = constraints.maxHeight;
+              if (constraints.maxHeight * 3 < _height!) {
+                h = constraints.maxHeight * 3;
               }
             }
 
-            // print(" constraint max width " + constraints.maxWidth.toString());
-            // print(" constraint max height " + constraints.maxHeight.toString());
-            // print(" w " + w.toString());
-            // print(" h " + h.toString());
-
             _painter!.setSize(Size(w, h));
-            return (widget.alignment == null)
-                ? RepaintBoundary(child: CustomPaint(painter: _painter, size: Size(w, h)))
-                : Align(
-                    alignment: widget.alignment!,
-                    child: CustomPaint(painter: _painter, size: Size(w, h)));
+            return FittedBox(
+                child: (widget.alignment == null)
+                    ? RepaintBoundary(
+                        child: CustomPaint(painter: _painter, size: Size(w, h)))
+                    : Align(
+                        alignment: widget.alignment!,
+                        child:
+                            CustomPaint(painter: _painter, size: Size(w, h))));
           })
         : (widget.loadingWidget == null)
             ? CircularProgressIndicator()
